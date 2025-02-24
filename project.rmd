@@ -29,8 +29,6 @@ Test data are available from:
 
 ### Data description
 
-The outcome variable is "*classe*", a factor variable with 5 levels. For this data set, participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in 5 different fashions:
-
 -   exactly according to the specification (Class A)
 -   throwing the elbows to the front (Class B)
 -   lifting the dumbbell only halfway (Class C)
@@ -92,7 +90,7 @@ After this step, `r dim(testingClean)[2]` variables remain in each dataset.
 Outcome is expressed as 5 levels in variable classe. The following graph shows the distribution of these levels in the training dataset.
 
 ```{r}
-barplot(table(trainingClean$classe), col="orange",
+barplot(table(trainingClean$classe), col="blue",
         xlab="Variable classe",
         main="Observations by outcome in training set")
 ```
