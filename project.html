@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Practical Machine Learning Course Project</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }
+        h1, h2, h3 { color: #333; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        code { font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Practical Machine Learning Course Project</h1>
+    <h2>Predicting the manner people exercise</h2>
+    <p><strong>Author:</strong> vomeyez</p>
+    <p><strong>Date:</strong> 2025-02-23</p>
+    
+    <h2>Abstract</h2>
+    <p>This project aims to predict the manner in which participants performed exercises using accelerometer data. A machine learning model is trained to classify movement patterns (classe variable). The project includes data preprocessing, model training, cross-validation, and predictions on test cases.</p>
+    
+    <h2>Introduction</h2>
+    <p>With devices like Jawbone Up, Nike FuelBand, and Fitbit, it's now affordable and easy to gather extensive data on personal activity. These devices are part of the quantified self movement, a community of individuals who track their own metrics to improve health, identify behavioral patterns, or simply because they enjoy technology. While people often measure how much of an activity they do, they rarely assess how well they perform it. This project aims to analyze accelerometer data collected from the belt, forearm, arm, and dumbbell of six participants as they performed barbell lifts, both correctly and incorrectly, in five different ways.</p>
+    
+    <p>Training data are available from: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">Training Data</a></p>
+    <p>Test data are available from: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">Test Data</a></p>
+    
+    <h3>Data Description</h3>
+    <p>The outcome variable is <em>classe</em>, a factor variable with 5 levels:</p>
+    <ul>
+        <li>Class A: exactly according to the specification</li>
+        <li>Class B: throwing the elbows to the front</li>
+        <li>Class C: lifting the dumbbell only halfway</li>
+        <li>Class D: lowering the dumbbell only halfway</li>
+        <li>Class E: throwing the hips to the front</li>
+    </ul>
+    
+    <h2>Data Exploration</h2>
+    <p>Start by loading the datasets and storing them into local objects.</p>
+    <pre><code>library(readr)
+library(caret)
+library(randomForest)
+training <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")</code></pre>
+    
+    <h2>Data Preprocessing</h2>
+    <p>Several variables that do not provide useful information will be removed.</p>
+    <pre><code>trainingClean <- training[,-c(1:7)]
+testingClean <- testing[,-c(1:7)]</code></pre>
+    
+    <p>Removing columns with more than 85% NA values:</p>
+    <pre><code>thr <- dim(training)[1] * 0.85
+colArray = colSums(is.na(trainingClean)) > thr
+trainingClean <- trainingClean[, !colArray]
+testingClean <- testingClean[, !colArray]</code></pre>
+    
+    <h2>Training a Prediction Model</h2>
+    <h3>Partitioning the dataset</h3>
+    <pre><code>set.seed(24680)
+forTrain <- createDataPartition(trainingClean$classe, p = 0.75, list = FALSE)
+validSet <- trainingClean[-forTrain, ]
+trainSet <- trainingClean[forTrain, ]</code></pre>
+    
+    <h3>Random Forest Prediction Model</h3>
+    <pre><code>rForest <- train(classe ~ ., data = trainSet, method = "rf", trControl = trainControl(method = "cv", 10), ntree = 200)
+rForest</code></pre>
+    
+    <h2>Model Validation</h2>
+    <pre><code>valPrediction <- predict(rForest, validSet)
+confValid <- confusionMatrix(valPrediction, factor(validSet$classe))
+confValid</code></pre>
+    
+    <h2>Prediction of the Manner in Which People Exercise</h2>
+    <pre><code>testPrediction <- predict(rForest, testingClean)
+testPrediction</code></pre>
+    
+    <h2>Conclusion</h2>
+    <p>A random forest model was trained for predicting the manner people exercise. The trained model achieved high accuracy during cross-validation and was successfully tested on a final dataset.</p>
+</body>
+</html>
