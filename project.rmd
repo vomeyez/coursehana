@@ -1,0 +1,164 @@
+---
+title: "Practical Machine Learning Course Project"
+subtitle: "Predicting the manner people exercise"
+author: "vomeyez"
+date: "2025-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Abstract
+
+This project aims to predict the manner in which participants performed exercises using accelerometer data. A machine learning model is trained to classify movement patterns (classe variable). The project includes data preprocessing, model training, cross-validation, and predictions on test cases.
+
+## Introduction
+
+With devices like Jawbone Up, Nike FuelBand, and Fitbit, it's now affordable and easy to gather extensive data on personal activity. These devices are part of the quantified self movement, a community of individuals who track their own metrics to improve health, identify behavioral patterns, or simply because they enjoy technology. While people often measure how much of an activity they do, they rarely assess how well they perform it. This project aims to analyze accelerometer data collected from the belt, forearm, arm, and dumbbell of six participants as they performed barbell lifts, both correctly and incorrectly, in five different ways.
+
+Training data are available from:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>
+
+Test data are available from:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+
+### Data description
+
+The outcome variable is "*classe*", a factor variable with 5 levels. For this data set, participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in 5 different fashions:
+
+-   exactly according to the specification (Class A)
+-   throwing the elbows to the front (Class B)
+-   lifting the dumbbell only halfway (Class C)
+-   lowering the dumbbell only halfway (Class D)
+-   throwing the hips to the front (Class E)
+
+## Data exploration
+
+Start by loading the datasets and storing them into local objects. 
+
+```{r,warning=FALSE,message=FALSE}
+library(readr)
+library(caret)
+library(randomForest)
+training <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing <-read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+```
+
+We observe that the training dataset contains `r dim(training)[1]` observations, while the testing dataset contains a total of `r dim(testing)[1]` observations. There are `r dim(testing)[2]` variables in the datasets, named as follows:
+
+```{r}
+names(training)
+```
+
+## Data preprocessing
+
+Early exploration of data shows that several variables do not provide information useful for the purposes of this experiment. The following variables will be removed from both testing and training datasets:
+
+```{r}
+t(t(head(names(training),7)))
+```
+
+```{r}
+trainingClean <- training[,-c(1:7)]
+testingClean <- testing[,-c(1:7)]
+
+```
+
+In addition, several other variables contain mostly NA observations. As they do not provide useful information, columns with more that 85% NA values will be removed.
+
+```{r}
+
+thr<-dim(training)[1]*0.85
+
+colRemove<-colnames(training)[colSums(is.na(training))>thr]
+
+colRemove
+```
+```{r}
+colArray=colSums(is.na(trainingClean))>thr
+trainingClean<-trainingClean[,!colArray]
+testingClean<-testingClean[,!colArray]
+```
+
+After this step, `r dim(testingClean)[2]` variables remain in each dataset.
+
+## Analysis of cleaned dataset
+
+Outcome is expressed as 5 levels in variable classe. The following graph shows the distribution of these levels in the training dataset.
+
+```{r}
+barplot(table(trainingClean$classe), col="orange",
+        xlab="Variable classe",
+        main="Observations by outcome in training set")
+```
+The plot shows that the most common case is A, indicating that the exercise is performed exactly as specified. The rest of the levels are very close to each other in number of occurrences.
+
+## Training a prediction model
+
+A Random Forest model will be trained to predict the levels in the testing dataset. First, the training dataset will be split as 75% for training and 25% for validation.
+
+### Partitioning the dataset
+
+```{r}
+
+set.seed(24680)
+
+forTrain <- createDataPartition(trainingClean$classe, p = 0.75, list = FALSE)
+validSet <- trainingClean[-forTrain, ]
+trainSet <- trainingClean[forTrain, ]
+```
+
+The training dataset consists of `r dim(trainSet)[1]` observations.
+The validation dataset consists of `r dim(validSet)[1]` observations.
+
+### Random forest prediction model
+
+A random forest model is fit for prediction using a 10-fold cross validation.
+
+```{r}
+rForest <- train(classe ~ ., data = trainSet, method = "rf", trControl = trainControl(method = "cv", 10), ntree = 200)
+rForest
+```
+
+The trained model has an accuracy of `r max(rForest$results$Accuracy)`. Now it will be validated using the validation dataset.
+
+```{r}
+valPrediction <- predict(rForest, validSet)
+
+confValid <- confusionMatrix(valPrediction, factor(validSet$classe))
+
+valValues=confValid$overall
+names(valValues)<-NULL
+```
+
+Accuracy of the model with the validation dataset is `r valValues[1]` and an out of sample error of `r (1-valValues[1])*100`%. The confusion matrix shows the results of validation.
+
+```{r}
+confValid
+```
+
+## Prediction of the manner in which people exercise
+
+Finally, the prediction will be performed on the testing dataset.
+
+```{r}
+testPrediction <- predict(rForest, testingClean)
+
+testPrediction
+
+```
+
+```{r}
+barplot(table(testPrediction), col="blue",
+        main="Prediction of how people exercise")
+```
+## Conclusion
+
+A random forest model was trained for prediction of the manner people exercise. The trained model has an accuracy of `r max(rForest$results$Accuracy)` over a 10-fold cross validation.
+
+Prediction using a validation dataset had an accuracy of `r confValid$overall["Accuracy"]`. A final test was performed on a 20-sample dataset.
